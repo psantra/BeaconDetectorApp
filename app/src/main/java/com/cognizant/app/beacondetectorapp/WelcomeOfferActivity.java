@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 public class WelcomeOfferActivity extends Activity {
     EditText password,userName;
     Button login;
+    Button pushNotification;
     ProgressBar progressBar;
 
 
@@ -35,6 +36,7 @@ public class WelcomeOfferActivity extends Activity {
         password=(EditText) findViewById(R.id.editText2);
         userName=(EditText) findViewById(R.id.editText1);
         login=(Button) findViewById(R.id.button1);
+        pushNotification =(Button) findViewById(R.id.button2);
 
         progressBar=(ProgressBar) findViewById(R.id.progressBar1);
         progressBar.setVisibility(View.GONE);
@@ -51,6 +53,15 @@ public class WelcomeOfferActivity extends Activity {
 
             }
         });
+
+        pushNotification.setOnClickListener(new OnClickListener (){
+
+            public void onClick(View v) {
+
+                progressBar.setVisibility(View.VISIBLE);
+                new ExecuteTask().execute();
+            }
+        });
     }
 
     class ExecuteTask extends AsyncTask<String, Integer, String>
@@ -58,7 +69,21 @@ public class WelcomeOfferActivity extends Activity {
 
         @Override
         protected String doInBackground(String... params) {
-            return PostData(params);
+
+            String[] paramValues=params;
+            String name=null;
+            String password=null;
+
+            if(paramValues !=null && paramValues.length!=0) {
+                name = paramValues[0];
+                password = paramValues[1];
+            }
+
+            if(name !=null && password !=null) {
+                return postLoginData(params);
+            }else{
+                return postPushNotificationData();
+            }
         }
 
         @SuppressLint("ShowToast")
@@ -72,7 +97,7 @@ public class WelcomeOfferActivity extends Activity {
 
     }
 
-    public String PostData(String[] values) {
+    public String postLoginData(String[] values) {
 
         String responseData="";
         boolean result = false;
@@ -106,6 +131,53 @@ public class WelcomeOfferActivity extends Activity {
                     result = true;
             }
 
+            responseData= readResponse(resp);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+        }
+        return responseData;
+    }
+
+
+    public String postPushNotificationData() {
+
+        String responseData="";
+        boolean result = false;
+        HttpClient hc = new DefaultHttpClient();
+        String message;
+
+        HttpPost httpPost = new HttpPost("http://10.0.2.2:8080/booking-engine/api/booking/notify/info");
+        JSONObject object = new JSONObject();
+
+        try {
+
+            object.put("memberId", "123456");
+            object.put("deviceId", "1234");
+            object.put("latitude", "65.7");
+            object.put("longitude", "87.6");
+            object.put("identifier", "Car_Rental");
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        try {
+
+            message = object.toString();
+            httpPost.setEntity(new StringEntity(message, "UTF8"));
+            httpPost.setHeader("Content-type", "application/json");
+            httpPost.setHeader("Booking-API-Key","1Q7VbsO93CPDMxTyzYp0ADnXG56gaRymAsp3vRiTcfw");
+            httpPost.setHeader("appPlatform","android");
+
+            HttpResponse resp = hc.execute(httpPost);
+
+            if (resp != null) {
+                if (resp.getStatusLine().getStatusCode() == 204)
+                    result = true;
+            }
+
             System.out.println("Status line:  " + resp.getStatusLine().getStatusCode());
             responseData= readResponse(resp);
 
@@ -118,6 +190,8 @@ public class WelcomeOfferActivity extends Activity {
 
 
     }
+
+
     public String readResponse(HttpResponse res) {
 
         InputStream is=null;
